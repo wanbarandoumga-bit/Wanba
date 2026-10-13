@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion - Bilan V9</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  background: radial-gradient(ellipse at top,#1e293b 0%,#0f172a 60%);
+  display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden
+}
+.bg-anim{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+.bg-anim span{
+  position:absolute;display:block;width:20px;height:20px;
+  background:rgba(255,255,255,0.08);animation:float 15s linear infinite;
+  bottom:-150px;border-radius:50%
+}
+.bg-anim span:nth-child(1){left:25%;width:80px;height:80px;animation-delay:0s}
+.bg-anim span:nth-child(2){left:10%;width:20px;height:20px;animation-delay:2s;animation-duration:12s}
+.bg-anim span:nth-child(3){left:70%;width:20px;height:20px;animation-delay:4s}
+.bg-anim span:nth-child(4){left:40%;width:60px;height:60px;animation-delay:0s;animation-duration:18s}
+.bg-anim span:nth-child(5){left:65%;width:20px;height:20px;animation-delay:0s}
+.bg-anim span:nth-child(6){left:75%;width:110px;height:110px;animation-delay:3s}
+@keyframes float{
+  0%{transform:translateY(0) rotate(0deg);opacity:1}
+  100%{transform:translateY(-1000px) rotate(720deg);opacity:0}
+}
+.box{
+  background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);
+  padding:35px 30px;border-radius:20px;width:90%;max-width:400px;
+  box-shadow:0 25px 50px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.2);
+  text-align:center;position:relative;z-index:2;
+  animation:slideUp 0.8s ease-out
+}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.logo{width:60px;height:60px;background:linear-gradient(135deg,#0f172a,#e67e22);border-radius:15px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+h2{color:#0f172a;font-size:20px;letter-spacing:0.5px}
+.sub{font-size:12px;color:#64748b;margin:6px 0 20px}
+input{
+  width:100%;padding:13px 15px;margin:8px 0;border:2px solid #e2e8f0;border-radius:10px;
+  font-size:14px;transition:0.3s;outline:none;background:#f8fafc
+}
+input:focus{border-color:#e67e22;background:white;box-shadow:0 0 0 3px rgba(230,126,34,0.15);transform:translateY(-1px)}
+button{
+  width:100%;padding:13px;background:linear-gradient(135deg,#0f172a,#1e293b);
+  color:white;border:none;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:14px;
+  font-size:14px;transition:0.3s;position:relative;overflow:hidden
+}
+button::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);transition:0.5s}
+button:hover::after{left:100%}
+button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(0,0,0,0.3);background:linear-gradient(135deg,#1e293b,#e67e22)}
+button:active{transform:translateY(0)}
+.error{color:#c0392b;font-size:12px;margin-top:10px;font-weight:bold;display:none;animation:shake 0.4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.footer{font-size:10px;color:#94a3b8;margin-top:18px;letter-spacing:0.3px}
+.user-badge{display:inline-block;background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:20px;font-size:10px;margin:2px}
+</style>
+</head>
+<body>
+<div class="bg-anim"><span></span><span></span><span></span><span></span></div>
+
+<div class="box">
+<div class="logo">📊</div>
+<h2>BILAN V9</h2>
+<p class="sub">Connexion sécurisée</p>
+<input type="text" id="username" placeholder="👤 Nom d'utilisateur">
+<input type="password" id="password" placeholder="🔑 Mot de passe">
+<button onclick="login()">Se connecter →</button>
+<div id="error" class="error">❌ Identifiant ou mot de passe incorrect</div>
+<div style="margin-top:12px">
+<span class="user-badge">admin</span>
+<span class="user-badge">caisse</span>
+<span class="user-badge">wilfried</span>
+</div>
+<p class="footer">Session valide 24h • Code suppression: 99886794<br>© 2026 Gestion Bilan</p>
+</div>
+
+<script>
+const USERS={"admin":"admin123","caisse":"caisse2024","wilfried":"wilfried"};
+function login(){
+ let u=document.getElementById('username').value.trim();
+ let p=document.getElementById('password').value.trim();
+ let err=document.getElementById('error');
+ if(USERS[u] && USERS[u]===p){
+   err.style.display='none';
+   document.querySelector('button').textContent='✔ Connexion...';
+   document.querySelector('button').style.background='linear-gradient(135deg,#16a34a,#15803d)';
+   let session={user:u,time:Date.now()};
+   localStorage.setItem('wk_session',JSON.stringify(session));
+   setTimeout(()=>{window.location.href='GestionLib.html';},600);
+ }else{
+   err.style.display='block';
+   document.getElementById('password').value='';
+   document.getElementById('password').focus();
+ }
+}
+let s=JSON.parse(localStorage.getItem('wk_session')||'null');
+if(s && (Date.now()-s.time) < 24*3600*1000){window.location.href='GestionLib.html';}
+document.addEventListener('keydown',e=>{if(e.key==='Enter') login()});
+</script>
+</body>
+</html>

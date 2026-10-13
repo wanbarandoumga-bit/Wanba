@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<!-- saved from url=(0063)file:///C:/Users/lenovo%20fm/3D%20Objects/Bilan/GestionLib.html -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BILAN PRO V9 SECURISE</title>
+<style>
+body{font-family:Arial;background:#f0f2f5;padding:8px;margin-top:30px}
+.container{max-width:1250px;margin:auto;background:white;padding:15px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+.tabs{display:flex;gap:4px;margin-bottom:15px;flex-wrap:wrap}
+.tab-btn{flex:1;padding:8px;border:none;border-radius:8px;font-weight:bold;background:#ddd;cursor:pointer;min-width:80px;font-size:10px}
+.tab-btn.active{background:#2c3e50;color:white}
+.tab-content{display:none}.tab-content.active{display:block}
+table{width:100%;border-collapse:collapse;margin-top:10px} th,td{border:1.5px solid #333;padding:5px;text-align:center;font-size:12px} th{background:#2c3e50;color:white}
+.carre{width:130px;height:40px;border:2px solid #333;border-radius:6px;text-align:center;font-weight:bold}
+.carre.auto{background:#d5f5e3}.btn{padding:8px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:12px}
+.btn-add{background:#3498db;color:white;margin:3px}.btn-calc{background:#27ae60;color:white;width:100%;padding:14px;margin-top:12px}
+.ligne{display:flex;justify-content:space-between;margin:10px 0;flex-wrap:wrap;align-items:center;gap:8px}
+select, input{padding:6px;border-radius:5px;border:1px solid #999}
+.valeur-list{display:flex;flex-direction:column;gap:5px}
+.val-input{display:flex;gap:5px;align-items:center;justify-content:center}
+.btn-mini{background:#e67e22;color:white;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-weight:bold}
+.total-cell{font-weight:bold;background:#fdebd0}
+.bilanPrint{position:fixed;left:-9999px;top:-9999px;width:100%;background:white;padding:15px;visibility:hidden}
+.bilanPrint.printing{position:absolute;left:0;top:0;visibility:visible;z-index:99999;display:block!important}
+@media print{ @page{margin:8mm} body *{visibility:hidden} .bilanPrint.printing, .bilanPrint.printing *{visibility:visible} .bilanPrint.printing{position:absolute;left:0;top:0;width:100%} .no-print{display:none!important} }
+.filter-box{background:#eaf2f8;padding:10px;border-radius:8px;border:1px solid #3498db;margin:10px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.subTab{padding:6px 10px;border:none;border-radius:5px;background:#eee;cursor:pointer;font-weight:bold;font-size:11px;margin:2px}
+.subTab.active{background:#f39c12;color:white}
+#alerteBanner{position:fixed;top:0;left:0;width:100%;background:#c0392b;color:white;padding:12px;text-align:center;font-weight:bold;z-index:9999;display:none;font-size:14px}
+#startupModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10000;display:flex;justify-content:center;align-items:center}
+.modalBox{background:white;padding:25px;border-radius:16px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+.modalBox h2{margin-bottom:10px;color:#0f172a}
+.modalBox p{font-size:13px;color:#475569;margin-bottom:15px}
+.modalBtn{width:100%;padding:12px;margin:6px 0;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px}
+.btnToday{background:#0f172a;color:white}
+.btnModify{background:#f39c12;color:black}
+.btnCancel{background:#e2e8f0;color:#0f172a}
+#modifyZone{display:none;margin-top:15px;border-top:1px solid #ddd;padding-top:15px}
+</style>
+</head>
+<body>
+<script>
+let sess = JSON.parse(localStorage.getItem('wk_session')||'null');
+if(!sess || (Date.now()-sess.time) > 24*3600*1000){
+  window.location.href='login.html';
+}
+</script>
+<div style="position:fixed;top:0;right:0;background:#0f172a;color:white;padding:6px 12px;font-size:11px;z-index:9998;border-radius:0 0 0 8px" class="no-print">
+👤 <span id="currentUser">admin</span> | <a href="file:///C:/Users/lenovo%20fm/3D%20Objects/Bilan/GestionLib.html#" onclick="logout()" style="color:#f39c12;text-decoration:none;font-weight:bold">Déconnexion</a>
+</div>
+
+<div id="startupModal" style="display: none;">
+<div class="modalBox">
+<h2>📅 Bienvenue <span id="modalUser">admin</span></h2>
+<p>Aujourd'hui nous sommes <b id="todayLabel">2026-10-12</b> <span id="todayJour" style="color:#f39c12">(Lundi)</span><br>Que veux-tu faire ?</p>
+<button class="modalBtn btnToday" onclick="chooseToday()">📝 ENTRER LE BILAN DU JOUR (<span id="todayBtnDate">2026-10-12</span>)</button>
+<button class="modalBtn btnModify" onclick="showModifyChoice()">✏️ MODIFIER LE BILAN D'UNE ANCIENNE JOURNÉE</button>
+<div id="modifyZone">
+<p style="font-weight:bold">Choisis la date à modifier :</p>
+<input type="date" id="modifyDateInput" style="width:100%;padding:10px;font-size:14px" max="2026-10-12">
+<div id="modifyInfo" style="font-size:12px;margin:8px 0;color:#e67e22;font-weight:bold"></div>
+<button class="modalBtn btnToday" onclick="confirmModifyDate()">Charger ce bilan</button>
+<button class="modalBtn btnCancel" onclick="hideModifyChoice()">Retour</button>
+</div>
+<button class="modalBtn btnCancel" style="margin-top:15px" onclick="closeStartup()">Continuer sans choisir (date du jour)</button>
+</div>
+</div>
+
+<div id="alerteBanner" style="display: none;"></div>
+<div class="container no-print">
+<div class="tabs">
+<button class="tab-btn" onclick="openTab(0)">1. TRANS</button>
+<button class="tab-btn" onclick="openTab(1)">2. NON PAYES</button>
+<button class="tab-btn active" onclick="openTab(2)">3. BUREAU</button>
+<button class="tab-btn" onclick="openTab(3)">4. SORTIES</button>
+<button class="tab-btn" onclick="openTab(4)">5. ENTREES</button>
+<button class="tab-btn" onclick="openTab(5)">6. CALCULETTE</button>
+<button class="tab-btn" style="background:#f39c12" onclick="openTab(6)">7. ARCHIVES 5 TAB</button>
+</div>
+<div class="tab-content" id="tab0"><button class="btn btn-add" onclick="addRowTrans()">+ Ajouter</button><table><thead><tr><th>TYPE</th><th>Nom Facture</th><th>ID Transaction</th><th>Numéro exp</th><th>Montant</th><th>X</th></tr></thead><tbody id="bodyTrans"><tr><td><select><option selected="">OM</option><option>MOMO</option></select></td><td><input value=""></td><td><input value=""></td><td><input value=""></td><td><input type="number" class="montant" value="" oninput="calcTransAuto()"></td><td><button onclick="this.closest(&#39;tr&#39;).remove();saveAll()" style="background:red;color:white;border:none">X</button></td></tr></tbody><tfoot><tr><td colspan="4" style="text-align:right;font-weight:bold;background:#eee">TOTAL</td><td id="totalTrans" style="background:#d5f5e3;font-weight:bold">0</td><td></td></tr></tfoot></table></div>
+<div class="tab-content" id="tab1"><button class="btn btn-add" style="background:#8e44ad" onclick="addRowNonPaye()">+ Ajouter</button><table><thead><tr><th>Nom client</th><th>Id facture</th><th>MONTANT</th><th>X</th></tr></thead><tbody id="bodyNonPaye"><tr><td><input value=""></td><td><input value=""></td><td><input type="number" class="nonpayer" value="" oninput="calcNonPayeAuto()"></td><td><button onclick="this.closest(&#39;tr&#39;).remove();saveAll()" style="background:red;color:white;border:none">X</button></td></tr></tbody><tfoot><tr><td colspan="2" style="text-align:right;background:#eee">TOTAL NON PAYE</td><td id="totalNonPaye" style="background:#fdebd0;font-weight:bold">4000</td><td></td></tr></tfoot></table></div>
+<div class="tab-content active" id="tab2"><button class="btn btn-add" style="background:#e67e22" onclick="addRowBur()">+ Ajouter</button><table><thead><tr><th>Désignation</th><th>Valeurs</th><th>Total</th><th>X</th></tr></thead><tbody id="bodyBur"><tr><td><select onchange="checkAutre(this)"><option selected="">Photocopie</option><option>Impression</option><option>Saisie</option><option>Scan</option><option>Raillures</option><option>Perforation</option><option>Plastification à chaud</option><option>Plastification à froid</option><option value="Autre">Autre</option></select><div class="zone-autre"></div></td><td><div class="valeur-list"><div class="val-input"><input type="number" class="valeur_bur" value="" placeholder="Valeur" oninput="calcBurAuto()"><button class="btn-mini" onclick="addValeur(this)">+</button></div></div></td><td class="total-cell ligne-total">400</td><td><button onclick="this.closest(&#39;tr&#39;).remove();calcBurAuto();saveAll()" style="background:red;color:white;border:none">X</button></td></tr><tr><td><select onchange="checkAutre(this)"><option selected="">Photocopie</option><option>Impression</option><option>Saisie</option><option>Scan</option><option>Raillures</option><option>Perforation</option><option>Plastification à chaud</option><option>Plastification à froid</option><option value="Autre">Autre</option></select><div class="zone-autre"></div></td><td><div class="valeur-list"><div class="val-input"><input type="number" class="valeur_bur" value="" placeholder="Valeur" oninput="calcBurAuto()"><button class="btn-mini" onclick="addValeur(this)">+</button></div></div></td><td class="total-cell ligne-total">300</td><td><button onclick="this.closest(&#39;tr&#39;).remove();calcBurAuto();saveAll()" style="background:red;color:white;border:none">X</button></td></tr><tr><td><select onchange="checkAutre(this)"><option selected="">Photocopie</option><option>Impression</option><option>Saisie</option><option>Scan</option><option>Raillures</option><option>Perforation</option><option>Plastification à chaud</option><option>Plastification à froid</option><option value="Autre">Autre</option></select><div class="zone-autre"></div></td><td><div class="valeur-list"><div class="val-input"><input type="number" class="valeur_bur" value="" placeholder="Valeur" oninput="calcBurAuto()"><button class="btn-mini" onclick="addValeur(this)">+</button></div><div class="val-input"><input type="number" class="valeur_bur" oninput="calcBurAuto()"><button class="btn-mini" style="background:#c0392b" onclick="this.parentElement.remove();calcBurAuto()">x</button></div><div class="val-input"><input type="number" class="valeur_bur" oninput="calcBurAuto()"><button class="btn-mini" style="background:#c0392b" onclick="this.parentElement.remove();calcBurAuto()">x</button></div></div></td><td class="total-cell ligne-total">1450</td><td><button onclick="this.closest(&#39;tr&#39;).remove();calcBurAuto();saveAll()" style="background:red;color:white;border:none">X</button></td></tr></tbody><tfoot><tr><td colspan="2" style="text-align:right;background:#eee">TOTAL BUREAUTIQUE</td><td id="totalBur" style="background:#fdebd0;font-weight:bold">2150</td><td></td></tr></tfoot></table></div>
+<div class="tab-content" id="tab3"><button class="btn btn-add" style="background:#c0392b" onclick="addRowSortie()">+ Ajouter</button><table><thead><tr><th>Motif sortie</th><th>Valeur</th><th>X</th></tr></thead><tbody id="bodySortie"><tr><td><input placeholder="Motif" value=""></td><td><input type="number" class="sortie_val" value="" oninput="calcSortieAuto()"></td><td><button onclick="this.closest(&#39;tr&#39;).remove();saveAll()" style="background:red;color:white;border:none">X</button></td></tr></tbody><tfoot><tr><td style="text-align:right;background:#eee">TOTAL SORTIE</td><td id="totalSortie" style="background:#fdebd0;font-weight:bold">3000</td><td></td></tr></tfoot></table></div>
+<div class="tab-content" id="tab4"><button class="btn btn-add" style="background:#27ae60" onclick="addRowEntree()">+ Ajouter</button><table><thead><tr><th>Motif entrée</th><th>Valeur</th><th>X</th></tr></thead><tbody id="bodyEntree"><tr><td><input placeholder="Motif" value=""></td><td><input type="number" class="entree_val" value="" oninput="calcEntreeAuto()"></td><td><button onclick="this.closest(&#39;tr&#39;).remove();saveAll()" style="background:red;color:white;border:none">X</button></td></tr></tbody><tfoot><tr><td style="text-align:right;background:#eee">TOTAL ENTREE</td><td id="totalEntree" style="background:#d5f5e3;font-weight:bold">0</td><td></td></tr></tfoot></table></div>
+<div class="tab-content" id="tab5">
+<div class="ligne"><label>Etat du <span id="jourSemaine" style="font-weight:bold;color:#e67e22">Lundi 2026-10-12</span></label><input type="date" id="dateJour" onchange="onDateChange()" max="2026-10-12"><input type="number" id="Etat" class="carre" oninput="saveFinal()"></div>
+<div class="ligne"><label>Total transactions</label><input type="number" id="Transaction" class="carre auto" readonly=""></div>
+<div class="ligne"><label>Total Non Payés</label><input type="number" id="Impayed" class="carre auto" readonly=""></div>
+<div class="ligne"><label>Total Sorties</label><input type="number" id="Sortie" class="carre auto" readonly=""></div>
+<div class="ligne"><label>Total Entrées</label><input type="number" id="Entree" class="carre auto" readonly=""></div>
+<div class="ligne"><label>Bureautique</label><input type="number" id="Bureautique" class="carre auto" readonly=""></div>
+<div class="ligne"><label>Fond Ouverture</label><input type="number" id="CashStart" class="carre" oninput="saveFinal()"></div>
+<div class="ligne"><label>Caisse fermeture</label><input type="number" id="CashMoneyEnd" class="carre" oninput="saveFinal()"></div>
+<button class="btn btn-calc" style="background:#2c3e50" onclick="calculerFinal()">CALCULER</button>
+<textarea id="Conclusion" placeholder="Conclusion..." style="width:100%;min-height:80px;border:2px solid #27ae60;border-radius:8px;padding:10px;font-weight:bold;margin-top:10px" oninput="saveFinal()"></textarea>
+<div id="MessageFinal" style="font-weight:bold;margin-top:8px">En attente...</div>
+<button class="btn btn-calc" style="background:#000;margin-top:10px" onclick="genererBilanEtAutoSave()">🖨️ IMPRIMER + SAUVEGARDE AUTO</button>
+</div>
+
+<div class="tab-content" id="tab6">
+<h3>📚 ARCHIVES DÉTAILLÉES - 5 TABLEAUX</h3>
+<div class="filter-box">
+<label>Du: <input type="date" id="filterStart"></label>
+<label>Au: <input type="date" id="filterEnd"></label>
+<button class="btn btn-add" onclick="applyFilters()">🔍 Filtrer</button>
+<button class="btn btn-add" style="background:#95a5a6" onclick="clearFilters()">Tout voir</button>
+<button class="btn btn-add" style="background:#2980b9" onclick="exportHistory()">💾 Export</button>
+<button class="btn btn-add" style="background:#8e44ad" onclick="document.getElementById(&#39;fileImport&#39;).click()">📥 Import</button>
+<input type="file" id="fileImport" style="display:none" accept=".json" onchange="importHistory(event)">
+</div>
+<div style="margin:10px 0">
+<button class="subTab active" onclick="openSubTab(0)">TRANS</button>
+<button class="subTab" onclick="openSubTab(1)">NON PAYES</button>
+<button class="subTab" onclick="openSubTab(2)">BUREAU + FILTRE</button>
+<button class="subTab" onclick="openSubTab(3)">SORTIES</button>
+<button class="subTab" onclick="openSubTab(4)">ENTREES</button>
+<button class="subTab" style="background:#2c3e50;color:white" onclick="openSubTab(5)">BILANS</button>
+</div>
+<div id="sub0" class="subContent"><div class="filter-box"><b>TRANS:</b> <button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;trans&#39;)">🖨️ Imprimer ce tableau filtré</button></div><table><thead><tr><th>Date / Jour</th><th>Détails</th><th>Total OM</th><th>Total MOMO</th><th>Total Jour</th></tr></thead><tbody id="archiveTrans"><tr><td>2026-10-05<br><small style="color:#e67e22;font-weight:bold">Lundi</small></td><td style="text-align:left;font-size:11px">OM:fac5032(550)<br>OM:fac5050(3700)<br>OM:PHOTOCOPIE(500)</td><td>4750</td><td>0</td><td><b>4750</b></td></tr><tr><td>2026-10-06<br><small style="color:#e67e22;font-weight:bold">Mardi</small></td><td style="text-align:left;font-size:11px">OM:fac5050(4000)<br>OM:fac5065(4000)</td><td>8000</td><td>0</td><td><b>8000</b></td></tr><tr><td>2026-10-07<br><small style="color:#e67e22;font-weight:bold">Mercredi</small></td><td style="text-align:left;font-size:11px"> - </td><td>0</td><td>0</td><td><b>0</b></td></tr><tr><td>2026-10-08<br><small style="color:#e67e22;font-weight:bold">Jeudi</small></td><td style="text-align:left;font-size:11px"> - </td><td>0</td><td>0</td><td><b>0</b></td></tr><tr><td>2026-10-09<br><small style="color:#e67e22;font-weight:bold">Vendredi</small></td><td style="text-align:left;font-size:11px">OM:fac5084(5500)</td><td>5500</td><td>0</td><td><b>5500</b></td></tr><tr><td>2026-10-10<br><small style="color:#e67e22;font-weight:bold">Samedi</small></td><td style="text-align:left;font-size:11px"> - </td><td>0</td><td>0</td><td><b>0</b></td></tr></tbody><tfoot><tr style="background:#d5f5e3;font-weight:bold"><td colspan="2">TOTAL PERIODE</td><td id="footOM">18250</td><td id="footMOMO">0</td><td id="footTrans">18250</td></tr></tfoot></table></div>
+<div id="sub1" class="subContent" style="display:none"><div class="filter-box"><b>NON PAYES</b> <button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;nonpaye&#39;)">🖨️ Imprimer</button></div><table><thead><tr><th>Date / Jour</th><th>Détails</th><th>Total Jour</th></tr></thead><tbody id="archiveNonPaye"><tr><td>2026-10-05<br><small style="color:#e67e22">Lundi</small></td><td style="text-align:left;font-size:11px">MAA DOC / FAC5038 : 10850</td><td><b>10850</b></td></tr><tr><td>2026-10-06<br><small style="color:#e67e22">Mardi</small></td><td style="text-align:left;font-size:11px">MR BERNARD / fac5060(2350)+fac5065(4050) : 6400</td><td><b>6400</b></td></tr><tr><td>2026-10-07<br><small style="color:#e67e22">Mercredi</small></td><td style="text-align:left;font-size:11px">MAA DOC / FAC5071 : 2600</td><td><b>2600</b></td></tr><tr><td>2026-10-08<br><small style="color:#e67e22">Jeudi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-09<br><small style="color:#e67e22">Vendredi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-10<br><small style="color:#e67e22">Samedi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr></tbody><tfoot><tr style="background:#fdebd0;font-weight:bold"><td colspan="2">TOTAL</td><td id="footNonPaye">19850</td></tr></tfoot></table></div>
+<div id="sub2" class="subContent" style="display:none"><div class="filter-box"><b>Filtre Nature:</b><select id="filterBurNature" multiple="" style="min-width:180px;height:80px"><option value="all">Tous</option><option value="Photocopie">Photocopie</option><option value="Impression">Impression</option><option value="Saisie">Saisie</option><option value="Scan">Scan</option><option value="Raillures">Raillures</option><option value="Perforation">Perforation</option><option value="Plastification à chaud">Plastification à chaud</option><option value="Plastification à froid">Plastification à froid</option></select><button class="btn btn-add" onclick="applyFilters()">Appliquer</button><button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;bur&#39;)">🖨️ Imprimer</button></div><table><thead><tr><th>Date / Jour</th><th>Détails</th><th>Total Filtré</th><th>Total Réel</th></tr></thead><tbody id="archiveBur"><tr><td>2026-10-05<br><small style="color:#e67e22">Lundi</small></td><td style="text-align:left;font-size:11px">Photocopie: 475=475<br>Impression: 700=700<br>Plastification à froid: 300=300</td><td><b>1475</b></td><td>1475</td></tr><tr><td>2026-10-06<br><small style="color:#e67e22">Mardi</small></td><td style="text-align:left;font-size:11px">Photocopie: 250=250</td><td><b>250</b></td><td>250</td></tr><tr><td>2026-10-07<br><small style="color:#e67e22">Mercredi</small></td><td style="text-align:left;font-size:11px">Photocopie: 500=500<br>Impression: 1500=1500<br>Scan: 450=450<br>Saisie: 1000=1000</td><td><b>3450</b></td><td>3450</td></tr><tr><td>2026-10-08<br><small style="color:#e67e22">Jeudi</small></td><td style="text-align:left;font-size:11px">Photocopie: 800=800<br>Impression: 1350=1350<br>Scan: 450=450<br>Saisie: 300=300</td><td><b>2900</b></td><td>2900</td></tr><tr><td>2026-10-09<br><small style="color:#e67e22">Vendredi</small></td><td style="text-align:left;font-size:11px">Photocopie: 1200=1200<br>Impression: 250=250<br>Plastification à froid: 300=300</td><td><b>1750</b></td><td>1750</td></tr><tr><td>2026-10-10<br><small style="color:#e67e22">Samedi</small></td><td style="text-align:left;font-size:11px">Photocopie: 400=400<br>Impression: 450=450<br>Scan: 600=600</td><td><b>1450</b></td><td>1450</td></tr></tbody><tfoot><tr style="background:#fdebd0;font-weight:bold"><td colspan="2">TOTAL filtré</td><td id="footBurFiltre">11275</td><td id="footBurTotal">11275</td></tr></tfoot></table></div>
+<div id="sub3" class="subContent" style="display:none"><div class="filter-box"><b>SORTIES</b> <button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;sortie&#39;)">🖨️ Imprimer</button></div><table><thead><tr><th>Date / Jour</th><th>Détails</th><th>Total Jour</th></tr></thead><tbody id="archiveSortie"><tr><td>2026-10-05<br><small style="color:#e67e22">Lundi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-06<br><small style="color:#e67e22">Mardi</small></td><td style="text-align:left;font-size:11px">SORTIE D'ARGENT PAR LE PATRON LE 071026 : 58000</td><td><b>58000</b></td></tr><tr><td>2026-10-07<br><small style="color:#e67e22">Mercredi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-08<br><small style="color:#e67e22">Jeudi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-09<br><small style="color:#e67e22">Vendredi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-10<br><small style="color:#e67e22">Samedi</small></td><td style="text-align:left;font-size:11px">SORTIE DE 1050 POUR ACHAT ACCESSOIRE CAR ARGENT EN CAISSE HIER ET AVANT HIER INSUFFISANT : 1050<br>CHANGEMENT DE CARTOUCHES D'ENCRES : 2000</td><td><b>3050</b></td></tr></tbody><tfoot><tr style="background:#fdebd0;font-weight:bold"><td colspan="2">TOTAL</td><td id="footSortie">61050</td></tr></tfoot></table></div>
+<div id="sub4" class="subContent" style="display:none"><div class="filter-box"><b>ENTREES</b> <button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;entree&#39;)">🖨️ Imprimer</button></div><table><thead><tr><th>Date / Jour</th><th>Détails</th><th>Total Jour</th></tr></thead><tbody id="archiveEntree"><tr><td>2026-10-05<br><small style="color:#e67e22">Lundi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-06<br><small style="color:#e67e22">Mardi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-07<br><small style="color:#e67e22">Mercredi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-08<br><small style="color:#e67e22">Jeudi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr><tr><td>2026-10-09<br><small style="color:#e67e22">Vendredi</small></td><td style="text-align:left;font-size:11px">Dette Payée de MAA DOC FAC5071 DU 071026 : 2600<br>Dette Payée de MAA DOC fac5038 DU 051026 SOLDE : 10850</td><td><b>13450</b></td></tr><tr><td>2026-10-10<br><small style="color:#e67e22">Samedi</small></td><td style="text-align:left;font-size:11px"> - </td><td><b>0</b></td></tr></tbody><tfoot><tr style="background:#d5f5e3;font-weight:bold"><td colspan="2">TOTAL</td><td id="footEntree">13450</td></tr></tfoot></table></div>
+<div id="sub5" class="subContent" style="display:none"><div class="filter-box"><b>BILANS</b> <button class="btn btn-add" style="background:#000" onclick="printArchive(&#39;bilan&#39;)">🖨️ Imprimer bilans filtrés</button> <button class="btn btn-add" style="background:#c0392b" onclick="clearHistory()">🗑️ Vider</button></div><table><thead><tr><th>Date / Jour</th><th>Etat</th><th>Entrée</th><th>Trans</th><th>Impayé</th><th>Sortie</th><th>Bureau</th><th>Fond</th><th>Caisse</th><th>X</th></tr></thead><tbody id="archiveBilan"><tr><td>2026-10-05<br><small style="color:#e67e22;font-weight:bold">Lundi</small></td><td>80050</td><td>0</td><td>4750</td><td>10850</td><td>0</td><td>1475</td><td>0</td><td><b>66025</b></td><td><button onclick="deleteBilan(1791662056321)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr><tr><td>2026-10-06<br><small style="color:#e67e22;font-weight:bold">Mardi</small></td><td>78725</td><td>0</td><td>8000</td><td>6400</td><td>58000</td><td>250</td><td>25</td><td><b>7050</b></td><td><button onclick="deleteBilan(1791660179950)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr><tr><td>2026-10-07<br><small style="color:#e67e22;font-weight:bold">Mercredi</small></td><td>54050</td><td>0</td><td>0</td><td>2600</td><td>0</td><td>3450</td><td>0</td><td><b>55000</b></td><td><button onclick="deleteBilan(1791659712571)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr><tr><td>2026-10-08<br><small style="color:#e67e22;font-weight:bold">Jeudi</small></td><td>17100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>2900</td><td>0</td><td><b>20050</b></td><td><button onclick="deleteBilan(1791653423464)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr><tr><td>2026-10-09<br><small style="color:#e67e22;font-weight:bold">Vendredi</small></td><td>24750</td><td>13450</td><td>5500</td><td>0</td><td>0</td><td>1750</td><td>0</td><td><b>34500</b></td><td><button onclick="deleteBilan(1791641580902)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr><tr><td>2026-10-10<br><small style="color:#e67e22;font-weight:bold">Samedi</small></td><td>31250</td><td>0</td><td>0</td><td>0</td><td>3050</td><td>1450</td><td>0</td><td><b>29675</b></td><td><button onclick="deleteBilan(1791792051994)" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr></tbody></table></div>
+<div id="autoStatus" style="font-size:11px;margin-top:10px;color:green">Affichage: 6 jour(s) | Backup: 2026-10-12T08:00:51.994Z</div>
+</div>
+</div>
+<div id="printArea" class="bilanPrint"></div>
+<div id="bilan" class="bilanPrint"></div>
+
+<script>
+const CODE_SUPPR="99886794";
+const NATURES=["Photocopie","Impression","Saisie","Scan","Raillures","Perforation","Plastification à chaud","Plastification à froid"];
+const JOURS=["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+function getJourSemaine(dateStr){if(!dateStr) return ""; let d=new Date(dateStr); if(isNaN(d)) return ""; return JOURS[d.getDay()];}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function logout(){localStorage.removeItem('wk_session');window.location.href='login.html';}
+function openTab(i){document.querySelectorAll('.tab-btn').forEach((b,idx)=>b.classList.toggle('active',idx==i));document.querySelectorAll('.tab-content').forEach((c,idx)=>c.classList.toggle('active',idx==i));if(i==5)loadToCalc(); if(i==6)applyFilters();}
+function openSubTab(i){document.querySelectorAll('.subTab').forEach((b,idx)=>b.classList.toggle('active',idx==i));document.querySelectorAll('.subContent').forEach((c,idx)=>c.style.display= idx==i ? 'block':'none');}
+function updateJourSemaine(){let ds=document.getElementById('dateJour').value; document.getElementById('jourSemaine').textContent = ds ? getJourSemaine(ds)+" "+ds : "";}
+function onDateChange(){
+ let input=document.getElementById('dateJour');
+ let max=todayISO();
+ if(input.value>max){alert('❌ Impossible! Tu ne peux pas faire un bilan d\'une date future ('+input.value+'). Date max: '+max); input.value=max;}
+ updateJourSemaine(); saveFinal(); checkAlerteSauvegarde();
+}
+function initStartup(){
+ let today=todayISO();
+ let jour=getJourSemaine(today);
+ document.getElementById('todayLabel').textContent=today;
+ document.getElementById('todayJour').textContent='('+jour+')';
+ document.getElementById('todayBtnDate').textContent=today;
+ document.getElementById('modalUser').textContent=sess? sess.user : '';
+ document.getElementById('modifyDateInput').max=today;
+ document.getElementById('modifyDateInput').value=today;
+ document.getElementById('modifyDateInput').addEventListener('change',()=>{
+   let v=document.getElementById('modifyDateInput').value;
+   let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]');
+   let exist=hist.find(b=>b.date==v);
+   document.getElementById('modifyInfo').textContent= exist? '✅ Bilan trouvé du '+v+' ('+ (exist.jour||getJourSemaine(v)) +') - prêt à modifier' : '⚠️ Aucun bilan pour '+v+' - tu vas créer un nouveau pour cette date';
+ });
+ let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]');
+ let exist=hist.find(b=>b.date==today);
+ if(exist){ document.getElementById('modifyInfo').textContent='✅ Bilan trouvé du '+today+' ('+ (exist.jour||getJourSemaine(today)) +') - prêt à modifier';}
+}
+function chooseToday(){
+ let t=todayISO();
+ document.getElementById('dateJour').value=t;
+ document.getElementById('dateJour').max=t;
+ clearAllFormsForNewDay();
+ updateJourSemaine();
+ closeStartup();
+}
+function showModifyChoice(){document.getElementById('modifyZone').style.display='block';}
+function hideModifyChoice(){document.getElementById('modifyZone').style.display='none';}
+function closeStartup(){document.getElementById('startupModal').style.display='none';}
+function confirmModifyDate(){
+ let d=document.getElementById('modifyDateInput').value;
+ if(!d){alert('Choisis une date');return;}
+ if(d>todayISO()){alert('Date future interdite!');return;}
+ let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]');
+ let b=hist.find(x=>x.date==d);
+ document.getElementById('dateJour').value=d;
+ document.getElementById('dateJour').max=todayISO();
+ if(b){loadBilanToForms(b); alert('Bilan du '+d+' ('+(b.jour||getJourSemaine(d))+') chargé - tu peux modifier');}
+ else {clearAllFormsForNewDay(); alert('Aucun bilan existant pour '+d+' - nouveau bilan vierge pour cette date');}
+ updateJourSemaine();
+ closeStartup();
+}
+function clearAllFormsForNewDay(){
+ bodyTrans.innerHTML=''; bodyNonPaye.innerHTML=''; bodyBur.innerHTML=''; bodySortie.innerHTML=''; bodyEntree.innerHTML='';
+ addRowTrans(); addRowNonPaye(); addRowBur(); addRowSortie(); addRowEntree();
+ Etat.value=''; CashStart.value=''; CashMoneyEnd.value=''; Conclusion.value=''; MessageFinal.textContent='En attente...';
+ calcTransAuto(); calcNonPayeAuto(); calcBurAuto(); calcSortieAuto(); calcEntreeAuto(); saveAll(); saveFinal();
+}
+function loadBilanToForms(b){
+ bodyTrans.innerHTML=''; bodyNonPaye.innerHTML=''; bodyBur.innerHTML=''; bodySortie.innerHTML=''; bodyEntree.innerHTML='';
+ let d=b.details||{};
+ (d.transList||[]).forEach(o=>addRowTrans(o));
+ (d.nonPayeList||[]).forEach(o=>addRowNonPaye(o));
+ (d.burList||[]).forEach(o=>addRowBur(o));
+ (d.sortieList||[]).forEach(o=>addRowSortie(o));
+ (d.entreeList||[]).forEach(o=>addRowEntree(o));
+ if((d.transList||[]).length==0) addRowTrans();
+ if((d.nonPayeList||[]).length==0) addRowNonPaye();
+ if((d.burList||[]).length==0) addRowBur();
+ if((d.sortieList||[]).length==0) addRowSortie();
+ if((d.entreeList||[]).length==0) addRowEntree();
+ Etat.value=b.Etat||''; CashStart.value=b.Fond||''; CashMoneyEnd.value=b.Caisse||''; Conclusion.value=b.conclusion||'';
+ saveAll(); saveFinal(); calcTransAuto(); calcNonPayeAuto(); calcBurAuto(); calcSortieAuto(); calcEntreeAuto(); loadToCalc(); calculerFinal();
+}
+function getAllData(){
+  let data={trans:[],nonPaye:[],bur:[],sortie:[],entree:[]};
+  document.querySelectorAll('#bodyTrans tr').forEach(tr=>{let sel=tr.querySelector('select'); let ins=tr.querySelectorAll('input'); if(!sel||ins.length<4) return; data.trans.push({type:sel.value,nom:ins[0].value,idT:ins[1].value,num:ins[2].value,mont:ins[3].value});});
+  document.querySelectorAll('#bodyNonPaye tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<3) return; data.nonPaye.push({client:ins[0].value,idf:ins[1].value,mont:ins[2].value});});
+  document.querySelectorAll('#bodyBur tr').forEach(tr=>{let sel=tr.querySelector('select'); if(!sel) return; let vals=[]; tr.querySelectorAll('.valeur_bur').forEach(i=>vals.push(i.value)); data.bur.push({nature:sel.value,vals:vals});});
+  document.querySelectorAll('#bodySortie tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<2) return; data.sortie.push({motif:ins[0].value,val:ins[1].value});});
+  document.querySelectorAll('#bodyEntree tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<2) return; data.entree.push({motif:ins[0].value,val:ins[1].value});});
+  return data;
+}
+function saveAll(){localStorage.setItem('dataV2', JSON.stringify(getAllData())); calcTransAuto(); calcNonPayeAuto(); calcBurAuto(); calcSortieAuto(); calcEntreeAuto(); checkAlerteSauvegarde();}
+function saveFinal(){localStorage.setItem('finalFields',JSON.stringify({Etat:Etat.value,CashStart:CashStart.value,CashMoneyEnd:CashMoneyEnd.value,dateJour:dateJour.value,Conclusion:Conclusion.value})); checkAlerteSauvegarde();}
+function restoreAll(){
+  let v2=localStorage.getItem('dataV2');
+  if(v2){let data=JSON.parse(v2); data.trans.forEach(o=>addRowTrans(o)); data.nonPaye.forEach(o=>addRowNonPaye(o)); data.bur.forEach(o=>addRowBur(o)); data.sortie.forEach(o=>addRowSortie(o)); data.entree.forEach(o=>addRowEntree(o));}
+  let f=JSON.parse(localStorage.getItem('finalFields')||'{}'); if(f.Etat) Etat.value=f.Etat; if(f.CashStart) CashStart.value=f.CashStart; if(f.CashMoneyEnd) CashMoneyEnd.value=f.CashMoneyEnd; if(f.dateJour) dateJour.value=f.dateJour; else dateJour.value=todayISO(); if(f.Conclusion) Conclusion.value=f.Conclusion;
+  dateJour.max=todayISO();
+  if(bodyTrans.children.length==0) addRowTrans(); if(bodyNonPaye.children.length==0) addRowNonPaye(); if(bodyBur.children.length==0) addRowBur(); if(bodySortie.children.length==0) addRowSortie(); if(bodyEntree.children.length==0) addRowEntree();
+  calcTransAuto(); calcNonPayeAuto(); calcBurAuto(); calcSortieAuto(); calcEntreeAuto(); loadToCalc();
+  let custom=JSON.parse(localStorage.getItem('customNatures')||'[]'); custom.forEach(c=>{ if(!NATURES.includes(c)) NATURES.push(c); });
+  updateBurNatureFilter();
+  document.body.addEventListener('input', ()=>{clearTimeout(window.saveTimer); window.saveTimer=setTimeout(saveAll,300); saveFinal();});
+  document.body.addEventListener('change', ()=>{saveAll(); saveFinal();});
+}
+function addRowTrans(obj){let tr=document.createElement('tr'); let t=obj?obj.type:'OM'; let nom=obj?obj.nom:''; let idT=obj?obj.idT:''; let num=obj?obj.num:''; let mont=obj?obj.mont:''; tr.innerHTML=`<td><select><option ${t=='OM'?'selected':''}>OM</option><option ${t=='MOMO'?'selected':''}>MOMO</option></select></td><td><input value="${nom}"></td><td><input value="${idT}"></td><td><input value="${num}"></td><td><input type="number" class="montant" value="${mont}" oninput="calcTransAuto()"></td><td><button onclick="this.closest('tr').remove();saveAll()" style="background:red;color:white;border:none">X</button></td>`; bodyTrans.appendChild(tr);}
+function calcTransAuto(){let s=0;document.querySelectorAll('.montant').forEach(i=>s+=parseFloat(i.value)||0);totalTrans.textContent=s;localStorage.setItem('transaction',s);Transaction.value=s;}
+function addRowNonPaye(obj){let tr=document.createElement('tr'); let client=obj?obj.client:''; let idf=obj?obj.idf:''; let mont=obj?obj.mont:''; tr.innerHTML=`<td><input value="${client}"></td><td><input value="${idf}"></td><td><input type="number" class="nonpayer" value="${mont}" oninput="calcNonPayeAuto()"></td><td><button onclick="this.closest('tr').remove();saveAll()" style="background:red;color:white;border:none">X</button></td>`; bodyNonPaye.appendChild(tr);}
+function calcNonPayeAuto(){let s=0;document.querySelectorAll('.nonpayer').forEach(i=>s+=parseFloat(i.value)||0);totalNonPaye.textContent=s;localStorage.setItem('Impayed',s);Impayed.value=s;}
+function buildOptions(sel=""){return NATURES.map(n=>`<option ${n==sel?'selected':''}>${n}</option>`).join('')+`<option value="Autre">Autre</option>`;}
+function addRowBur(obj){let nature=obj?obj.nature:NATURES[0]; let vals=obj?obj.vals:['']; if(vals.length==0) vals=['']; let valsHtml=vals.map((v,i)=> i==0? `<div class="val-input"><input type="number" class="valeur_bur" value="${v}" placeholder="Valeur" oninput="calcBurAuto()"><button class="btn-mini" onclick="addValeur(this)">+</button></div>` : `<div class="val-input"><input type="number" class="valeur_bur" value="${v}" oninput="calcBurAuto()"><button class="btn-mini" style="background:#c0392b" onclick="this.parentElement.remove();calcBurAuto()">x</button></div>`).join(''); let tr=document.createElement('tr'); tr.innerHTML=`<td><select onchange="checkAutre(this)">${buildOptions(nature)}</select><div class="zone-autre"></div></td><td><div class="valeur-list">${valsHtml}</div></td><td class="total-cell ligne-total">0</td><td><button onclick="this.closest('tr').remove();calcBurAuto();saveAll()" style="background:red;color:white;border:none">X</button></td>`; bodyBur.appendChild(tr);}
+function addValeur(btn){let list=btn.closest('.valeur-list');let div=document.createElement('div');div.className='val-input';div.innerHTML=`<input type="number" class="valeur_bur" oninput="calcBurAuto()"><button class="btn-mini" style="background:#c0392b" onclick="this.parentElement.remove();calcBurAuto()">x</button>`;list.appendChild(div);calcBurAuto();}
+function checkAutre(sel){let zone=sel.parentElement.querySelector('.zone-autre');if(sel.value=='Autre'){zone.innerHTML=`<input style="width:90%;border:2px solid #e67e22" placeholder="Nouveau" onkeydown="if(event.key==='Enter'){validerAutre(this)}" onblur="validerAutre(this)">`;zone.querySelector('input').focus();}else zone.innerHTML='';}
+function validerAutre(input){if(!input.value.trim()) return; let nv=input.value.trim(); let sel=input.closest('td').querySelector('select'); if(!NATURES.includes(nv)){NATURES.push(nv); let c=JSON.parse(localStorage.getItem('customNatures')||'[]'); c.push(nv); localStorage.setItem('customNatures',JSON.stringify(c));} document.querySelectorAll('#bodyBur select').forEach(s=>{let cur=(s===sel)?nv:s.value; s.innerHTML=buildOptions(cur);}); sel.value=nv; input.parentElement.innerHTML=''; saveAll(); updateBurNatureFilter();}
+function calcBurAuto(){let gt=0;document.querySelectorAll('#bodyBur tr').forEach(tr=>{let sum=0;tr.querySelectorAll('.valeur_bur').forEach(i=>sum+=parseFloat(i.value)||0);tr.querySelector('.ligne-total').textContent=sum;gt+=sum;});totalBur.textContent=gt;localStorage.setItem('Bureautique',gt);Bureautique.value=gt;}
+function addRowSortie(obj){let motif=obj?obj.motif:''; let val=obj?obj.val:''; let tr=document.createElement('tr'); tr.innerHTML=`<td><input placeholder="Motif" value="${motif}"></td><td><input type="number" class="sortie_val" value="${val}" oninput="calcSortieAuto()"></td><td><button onclick="this.closest('tr').remove();saveAll()" style="background:red;color:white;border:none">X</button></td>`; bodySortie.appendChild(tr);}
+function calcSortieAuto(){let s=0;document.querySelectorAll('.sortie_val').forEach(i=>s+=parseFloat(i.value)||0);totalSortie.textContent=s;localStorage.setItem('sortie',s);Sortie.value=s;}
+function addRowEntree(obj){let motif=obj?obj.motif:''; let val=obj?obj.val:''; let tr=document.createElement('tr'); tr.innerHTML=`<td><input placeholder="Motif" value="${motif}"></td><td><input type="number" class="entree_val" value="${val}" oninput="calcEntreeAuto()"></td><td><button onclick="this.closest('tr').remove();saveAll()" style="background:red;color:white;border:none">X</button></td>`; bodyEntree.appendChild(tr);}
+function calcEntreeAuto(){let s=0;document.querySelectorAll('.entree_val').forEach(i=>s+=parseFloat(i.value)||0);totalEntree.textContent=s;localStorage.setItem('entree',s);Entree.value=s;}
+function loadToCalc(){Transaction.value=localStorage.getItem('transaction')||0; Impayed.value=localStorage.getItem('Impayed')||0; Bureautique.value=localStorage.getItem('Bureautique')||0; Sortie.value=localStorage.getItem('sortie')||0; Entree.value=localStorage.getItem('entree')||0;}
+function calculerFinal(){loadToCalc(); let EtatV=parseFloat(Etat.value)||0, EntreeV=parseFloat(Entree.value)||0, TransV=parseFloat(Transaction.value)||0, ImpV=parseFloat(Impayed.value)||0, SortV=parseFloat(Sortie.value)||0, BurV=parseFloat(Bureautique.value)||0, StartV=parseFloat(CashStart.value)||0, EndV=parseFloat(CashMoneyEnd.value)||0; let Test=(EtatV+EntreeV)-(TransV+ImpV+SortV)+(BurV+StartV); let Ecart=Test-EndV; let msg=MessageFinal; if(Ecart>0){msg.textContent='MANQUANT: '+Ecart;}else if(Ecart<0){msg.textContent='EXCES: '+Math.abs(Ecart);}else msg.textContent='EQUILIBRE'; saveFinal(); return {Test,Ecart,EtatV,EntreeV,TransV,ImpV,SortV,BurV,StartV,EndV};}
+function collectCurrentDetails(){
+  let transList=[]; let omTotal=0,momoTotal=0;
+  document.querySelectorAll('#bodyTrans tr').forEach(tr=>{let sel=tr.querySelector('select'); let inputs=tr.querySelectorAll('input'); if(!sel||inputs.length<4) return; let type=sel.value; let nom=inputs[0].value; let idT=inputs[1].value; let num=inputs[2].value; let mont=parseFloat(inputs[3].value)||0; if(!nom &&!mont) return; if(type=='OM') omTotal+=mont; else momoTotal+=mont; transList.push({type,nom,idT,num,mont});});
+  let nonPayeList=[]; document.querySelectorAll('#bodyNonPaye tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<3) return; let client=ins[0].value; let idf=ins[1].value; let mont=parseFloat(ins[2].value)||0; if(!client &&!mont) return; nonPayeList.push({client,idf,mont});});
+  let burList=[]; document.querySelectorAll('#bodyBur tr').forEach(tr=>{let sel=tr.querySelector('select'); if(!sel) return; let nature=sel.value; let vals=[]; tr.querySelectorAll('.valeur_bur').forEach(i=>{let v=parseFloat(i.value)||0; if(v) vals.push(v);}); if(vals.length==0 &&!nature) return; let total=vals.reduce((a,b)=>a+b,0); burList.push({nature,vals,total});});
+  let sortieList=[]; document.querySelectorAll('#bodySortie tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<2) return; let motif=ins[0].value; let val=parseFloat(ins[1].value)||0; if(!motif &&!val) return; sortieList.push({motif,val});});
+  let entreeList=[]; document.querySelectorAll('#bodyEntree tr').forEach(tr=>{let ins=tr.querySelectorAll('input'); if(ins.length<2) return; let motif=ins[0].value; let val=parseFloat(ins[1].value)||0; if(!motif &&!val) return; entreeList.push({motif,val});});
+  return {transList,omTotal,momoTotal,transTotal:omTotal+momoTotal,nonPayeList,nonPayeTotal:nonPayeList.reduce((a,b)=>a+b.mont,0),burList,burTotal:burList.reduce((a,b)=>a+b.total,0),sortieList,sortieTotal:sortieList.reduce((a,b)=>a+b.val,0),entreeList,entreeTotal:entreeList.reduce((a,b)=>a+b.val,0)};
+}
+function saveBilanToHistoryInternal(){
+  let calc=calculerFinal(); let details=collectCurrentDetails(); let date=dateJour.value; if(!date){alert('Choisis une date!');return null;}
+  if(date>todayISO()){alert('❌ Date future interdite!');return null;}
+  let jour=getJourSemaine(date);
+  let bilan={id:Date.now(),date:date,jour:jour,Etat:calc.EtatV,Entree:calc.EntreeV,Trans:calc.TransV,Imp:calc.ImpV,Sortie:calc.SortV,Bur:calc.BurV,Fond:calc.StartV,Caisse:calc.EndV,Theorique:calc.Test,Ecart:calc.Ecart,conclusion:Conclusion.value,details:details};
+  let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]');
+  let idx=hist.findIndex(b=>b.date==date);
+  if(idx>=0){ hist[idx]=bilan; } else { hist.push(bilan); }
+  localStorage.setItem('bilanHistory',JSON.stringify(hist)); localStorage.setItem('bilanHistory_auto_backup',JSON.stringify(hist)); localStorage.setItem('last_auto_backup_date',new Date().toISOString());
+  return bilan;
+}
+function genererBilanEtAutoSave(){
+  let bilan=saveBilanToHistoryInternal(); if(!bilan) return;
+  let det=bilan.details; let jour=bilan.jour;
+  let html=`<h2 style="text-align:center">BILAN JOURNALIER - ${jour} ${bilan.date}</h2>`;
+  html+=`<h3>1. TRANSACTIONS - OM:${det.omTotal} MOMO:${det.momoTotal} TOTAL:${det.transTotal}</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>TYPE</th><th>Nom</th><th>ID</th><th>Num</th><th>Montant</th></tr>`;
+  det.transList.forEach(t=>{ html+=`<tr><td>${t.type}</td><td>${t.nom}</td><td>${t.idT}</td><td>${t.num}</td><td>${t.mont}</td></tr>`; }); html+=`</table>`;
+  html+=`<h3>2. NON PAYES - TOTAL ${det.nonPayeTotal}</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Client</th><th>Facture</th><th>Montant</th></tr>`; det.nonPayeList.forEach(n=>{ html+=`<tr><td>${n.client}</td><td>${n.idf}</td><td>${n.mont}</td></tr>`; }); html+=`</table>`;
+  html+=`<h3>3. BUREAUTIQUE - TOTAL ${det.burTotal}</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Nature</th><th>Valeurs</th><th>Total</th></tr>`; det.burList.forEach(b=>{ html+=`<tr><td>${b.nature}</td><td>${b.vals.join('+')}</td><td>${b.total}</td></tr>`; }); html+=`</table>`;
+  html+=`<h3>4. SORTIES - TOTAL ${det.sortieTotal}</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Motif</th><th>Valeur</th></tr>`; det.sortieList.forEach(s=>{ html+=`<tr><td>${s.motif}</td><td>${s.val}</td></tr>`; }); html+=`</table>`;
+  html+=`<h3>5. ENTREES - TOTAL ${det.entreeTotal}</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Motif</th><th>Valeur</th></tr>`; det.entreeList.forEach(s=>{ html+=`<tr><td>${s.motif}</td><td>${s.val}</td></tr>`; }); html+=`</table>`;
+  html+=`<h3>RESUME SANS ECART</h3><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date</th><th>Jour</th><th>Etat</th><th>Entree</th><th>Trans</th><th>Impaye</th><th>Sortie</th><th>Bur</th><th>Fond</th><th>Caisse</th></tr><tr><td>${bilan.date}</td><td>${jour}</td><td>${bilan.Etat}</td><td>${bilan.Entree}</td><td>${bilan.Trans}</td><td>${bilan.Imp}</td><td>${bilan.Sortie}</td><td>${bilan.Bur}</td><td>${bilan.Fond}</td><td><b>${bilan.Caisse}</b></td></tr></table><p><b>Conclusion:</b> ${bilan.conclusion}</p>`;
+  let div=document.getElementById('bilan');
+  div.innerHTML=html;
+  printWithCleanup('bilan');
+}
+function printWithCleanup(id){
+ let el=document.getElementById(id);
+ el.classList.add('printing');
+ window.print();
+ setTimeout(()=>{el.classList.remove('printing'); el.innerHTML='';},500);
+}
+window.addEventListener('afterprint',()=>{
+ document.querySelectorAll('.bilanPrint').forEach(e=>{e.classList.remove('printing'); e.innerHTML='';});
+});
+function getFilteredHistory(){let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]'); let start=document.getElementById('filterStart').value; let end=document.getElementById('filterEnd').value; if(start) hist=hist.filter(b=>b.date>=start); if(end) hist=hist.filter(b=>b.date<=end); hist.sort((a,b)=> new Date(a.date)-new Date(b.date)); return hist;}
+function applyFilters(){let hist=getFilteredHistory(); renderTransArchive(hist); renderNonPayeArchive(hist); renderBurArchive(hist); renderSortieArchive(hist); renderEntreeArchive(hist); renderBilanArchive(hist); updateBurNatureFilter(); document.getElementById('autoStatus').textContent='Affichage: '+hist.length+' jour(s) | Backup: '+(localStorage.getItem('last_auto_backup_date')||'jamais');}
+function clearFilters(){document.getElementById('filterStart').value='';document.getElementById('filterEnd').value='';document.getElementById('filterBurNature').selectedIndex=0; applyFilters();}
+function updateBurNatureFilter(){let sel=document.getElementById('filterBurNature'); let current=[...sel.selectedOptions].map(o=>o.value); sel.innerHTML='<option value="all">Tous</option>'+NATURES.map(n=>`<option value="${n}">${n}</option>`).join(''); [...sel.options].forEach(o=>{ if(current.includes(o.value)) o.selected=true; }); if(current.length==0) sel.options[0].selected=true;}
+function renderTransArchive(hist){let tbody=document.getElementById('archiveTrans'); tbody.innerHTML=''; let totOM=0,totMOMO=0,totT=0; hist.forEach(b=>{let d=b.details||{}; let om=d.omTotal||0; let momo=d.momoTotal||0; let tot=d.transTotal||b.Trans||0; totOM+=om; totMOMO+=momo; totT+=tot; let details=(d.transList||[]).map(t=>`${t.type}:${t.nom}(${t.mont})`).join('<br>')||' - '; let jour=b.jour||getJourSemaine(b.date); tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22;font-weight:bold">${jour}</small></td><td style="text-align:left;font-size:11px">${details}</td><td>${om}</td><td>${momo}</td><td><b>${tot}</b></td></tr>`;}); document.getElementById('footOM').textContent=totOM; document.getElementById('footMOMO').textContent=totMOMO; document.getElementById('footTrans').textContent=totT;}
+function renderNonPayeArchive(hist){let tbody=document.getElementById('archiveNonPaye'); tbody.innerHTML=''; let tot=0; hist.forEach(b=>{let d=b.details||{}; let list=d.nonPayeList||[]; let t=d.nonPayeTotal||b.Imp||0; tot+=t; let details=list.map(x=>`${x.client} / ${x.idf} : ${x.mont}`).join('<br>')||' - '; let jour=b.jour||getJourSemaine(b.date); tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22">${jour}</small></td><td style="text-align:left;font-size:11px">${details}</td><td><b>${t}</b></td></tr>`;}); document.getElementById('footNonPaye').textContent=tot;}
+function renderBurArchive(hist){let tbody=document.getElementById('archiveBur'); tbody.innerHTML=''; let totFiltre=0, totReel=0; let sel=document.getElementById('filterBurNature'); let selected=[...sel.selectedOptions].map(o=>o.value); let showAll=selected.includes('all')||selected.length==0; hist.forEach(b=>{let d=b.details||{}; let list=d.burList||[]; let totalJour=d.burTotal||b.Bur||0; totReel+=totalJour; let filteredList = showAll? list : list.filter(x=>selected.includes(x.nature)); let totalFiltreJour = filteredList.reduce((a,x)=>a+x.total,0); totFiltre+=totalFiltreJour; let details=filteredList.map(x=>`${x.nature}: ${x.vals.join('+')}=${x.total}`).join('<br>')|| (showAll? ' - ' : '<i>Aucun</i>'); let jour=b.jour||getJourSemaine(b.date); if(showAll || filteredList.length>0){ tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22">${jour}</small></td><td style="text-align:left;font-size:11px">${details}</td><td><b>${totalFiltreJour}</b></td><td>${totalJour}</td></tr>`;}}); document.getElementById('footBurFiltre').textContent=totFiltre; document.getElementById('footBurTotal').textContent=totReel;}
+function renderSortieArchive(hist){let tbody=document.getElementById('archiveSortie'); tbody.innerHTML=''; let tot=0; hist.forEach(b=>{let d=b.details||{}; let list=d.sortieList||[]; let t=d.sortieTotal||b.Sortie||0; tot+=t; let details=list.map(x=>`${x.motif} : ${x.val}`).join('<br>')||' - '; let jour=b.jour||getJourSemaine(b.date); tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22">${jour}</small></td><td style="text-align:left;font-size:11px">${details}</td><td><b>${t}</b></td></tr>`;}); document.getElementById('footSortie').textContent=tot;}
+function renderEntreeArchive(hist){let tbody=document.getElementById('archiveEntree'); tbody.innerHTML=''; let tot=0; hist.forEach(b=>{let d=b.details||{}; let list=d.entreeList||[]; let t=d.entreeTotal||b.Entree||0; tot+=t; let details=list.map(x=>`${x.motif} : ${x.val}`).join('<br>')||' - '; let jour=b.jour||getJourSemaine(b.date); tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22">${jour}</small></td><td style="text-align:left;font-size:11px">${details}</td><td><b>${t}</b></td></tr>`;}); document.getElementById('footEntree').textContent=tot;}
+function renderBilanArchive(hist){let tbody=document.getElementById('archiveBilan'); tbody.innerHTML=''; hist.forEach(b=>{let jour=b.jour||getJourSemaine(b.date); tbody.innerHTML+=`<tr><td>${b.date}<br><small style="color:#e67e22;font-weight:bold">${jour}</small></td><td>${b.Etat}</td><td>${b.Entree}</td><td>${b.Trans}</td><td>${b.Imp}</td><td>${b.Sortie}</td><td>${b.Bur}</td><td>${b.Fond}</td><td><b>${b.Caisse}</b></td><td><button onclick="deleteBilan(${b.id})" style="background:red;color:white;border:none;padding:4px 8px">X</button></td></tr>`;});}
+function deleteBilan(id){
+ let code=prompt('⛔ CODE DE SUPPRESSION REQUIS:');
+ if(code!==CODE_SUPPR){alert('❌ Code incorrect! Suppression refusée.'); return;}
+ if(!confirm('Vraiment supprimer ce bilan?')) return;
+ let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]').filter(b=>b.id!=id);
+ localStorage.setItem('bilanHistory',JSON.stringify(hist)); localStorage.setItem('bilanHistory_auto_backup',JSON.stringify(hist)); applyFilters();
+ alert('✅ Bilan supprimé');
+}
+function clearHistory(){
+ let code=prompt('⛔ CODE REQUIS pour vider toutes les archives:');
+ if(code!==CODE_SUPPR){alert('❌ Code incorrect!');return;}
+ if(confirm('Vider toutes les archives?')){ localStorage.removeItem('bilanHistory'); localStorage.removeItem('bilanHistory_auto_backup'); applyFilters(); }
+}
+function exportHistory(){let hist=localStorage.getItem('bilanHistory'); if(!hist||hist=='[]'){alert('Vide');return;} let blob=new Blob([hist],{type:'application/json'}); let url=URL.createObjectURL(blob); let a=document.createElement('a'); a.href=url; a.download='sauvegarde_'+new Date().toISOString().slice(0,10)+'.json'; a.click(); URL.revokeObjectURL(url);}
+function importHistory(e){let file=e.target.files[0]; if(!file) return; let r=new FileReader(); r.onload=function(ev){try{let data=JSON.parse(ev.target.result); if(!Array.isArray(data)) throw 'invalide'; let cur=JSON.parse(localStorage.getItem('bilanHistory')||'[]'); data.forEach(b=>{ if(b.date>todayISO()){return;} let existIdx=cur.findIndex(x=>x.date==b.date); if(existIdx>=0) cur[existIdx]=b; else cur.push(b); }); localStorage.setItem('bilanHistory',JSON.stringify(cur)); localStorage.setItem('bilanHistory_auto_backup',JSON.stringify(cur)); alert('Import OK '+data.length); applyFilters();}catch(err){alert('Erreur '+err);}}; r.readAsText(file);}
+function printArchive(type){
+  let hist=getFilteredHistory(); if(hist.length==0){alert('Aucune donnée');return;}
+  let start=document.getElementById('filterStart').value||'début'; let end=document.getElementById('filterEnd').value||'fin';
+  let title=`ARCHIVE ${type.toUpperCase()} - Du ${start} au ${end} - ${hist.length} jour(s)`;
+  let tableHtml="";
+  if(type=='trans'){
+    tableHtml=`<table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Détails</th><th>OM</th><th>MOMO</th><th>Total</th></tr>`;
+    let totOM=0,totMOMO=0,totT=0;
+    hist.forEach(b=>{let d=b.details||{}; let om=d.omTotal||0; let momo=d.momoTotal||0; let tot=d.transTotal||b.Trans||0; totOM+=om; totMOMO+=momo; totT+=tot; let jour=b.jour||getJourSemaine(b.date); let details=(d.transList||[]).map(t=>`${t.type}:${t.nom}(${t.mont})`).join(', ')||'-'; tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${details}</td><td>${om}</td><td>${momo}</td><td>${tot}</td></tr>`;});
+    tableHtml+=`<tr style="font-weight:bold;background:#d5f5e3"><td colspan="2">TOTAL PERIODE</td><td>${totOM}</td><td>${totMOMO}</td><td>${totT}</td></tr></table>`;
+  } else if(type=='nonpaye'){
+    tableHtml=`<table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Détails</th><th>Total</th></tr>`; let tot=0;
+    hist.forEach(b=>{let d=b.details||{}; let t=d.nonPayeTotal||b.Imp||0; tot+=t; let jour=b.jour||getJourSemaine(b.date); let details=(d.nonPayeList||[]).map(x=>`${x.client}/${x.idf}:${x.mont}`).join(', ')||'-'; tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${details}</td><td>${t}</td></tr>`;});
+    tableHtml+=`<tr style="font-weight:bold"><td colspan="2">TOTAL</td><td>${tot}</td></tr></table>`;
+  } else if(type=='bur'){
+    let sel=document.getElementById('filterBurNature'); let fil=[...sel.selectedOptions].map(o=>o.value).join(', '); let selected=[...sel.selectedOptions].map(o=>o.value); let showAll=selected.includes('all')||selected.length==0; let totFiltre=0,totReel=0;
+    tableHtml=`<p><b>Filtre Nature: ${fil}</b></p><table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Détails filtrés</th><th>Total Filtré</th><th>Total Réel</th></tr>`;
+    hist.forEach(b=>{let d=b.details||{}; let list=d.burList||[]; let totalJour=d.burTotal||b.Bur||0; totReel+=totalJour; let filteredList=showAll?list:list.filter(x=>selected.includes(x.nature)); let totalFiltreJour=filteredList.reduce((a,x)=>a+x.total,0); totFiltre+=totalFiltreJour; let jour=b.jour||getJourSemaine(b.date); let details=filteredList.map(x=>`${x.nature}:${x.vals.join('+')}=${x.total}`).join(', ')|| (showAll?'-':'Aucun'); if(showAll||filteredList.length>0) tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${details}</td><td>${totalFiltreJour}</td><td>${totalJour}</td></tr>`;});
+    tableHtml+=`<tr style="font-weight:bold"><td colspan="2">TOTAL</td><td>${totFiltre}</td><td>${totReel}</td></tr></table>`;
+  } else if(type=='sortie'){
+    tableHtml=`<table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Détails</th><th>Total</th></tr>`; let tot=0;
+    hist.forEach(b=>{let d=b.details||{}; let t=d.sortieTotal||b.Sortie||0; tot+=t; let jour=b.jour||getJourSemaine(b.date); let details=(d.sortieList||[]).map(x=>`${x.motif}:${x.val}`).join(', ')||'-'; tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${details}</td><td>${t}</td></tr>`;});
+    tableHtml+=`<tr style="font-weight:bold"><td colspan="2">TOTAL</td><td>${tot}</td></tr></table>`;
+  } else if(type=='entree'){
+    tableHtml=`<table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Détails</th><th>Total</th></tr>`; let tot=0;
+    hist.forEach(b=>{let d=b.details||{}; let t=d.entreeTotal||b.Entree||0; tot+=t; let jour=b.jour||getJourSemaine(b.date); let details=(d.entreeList||[]).map(x=>`${x.motif}:${x.val}`).join(', ')||'-'; tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${details}</td><td>${t}</td></tr>`;});
+    tableHtml+=`<tr style="font-weight:bold"><td colspan="2">TOTAL</td><td>${tot}</td></tr></table>`;
+  } else if(type=='bilan'){
+    tableHtml=`<table border="1" style="width:100%;border-collapse:collapse"><tr><th>Date / Jour</th><th>Etat</th><th>Entrée</th><th>Trans</th><th>Impayé</th><th>Sortie</th><th>Bur</th><th>Fond</th><th>Caisse</th></tr>`;
+    hist.forEach(b=>{let jour=b.jour||getJourSemaine(b.date); tableHtml+=`<tr><td>${b.date} ${jour}</td><td>${b.Etat}</td><td>${b.Entree}</td><td>${b.Trans}</td><td>${b.Imp}</td><td>${b.Sortie}</td><td>${b.Bur}</td><td>${b.Fond}</td><td>${b.Caisse}</td></tr>`;});
+    tableHtml+=`</table>`;
+  }
+  let printDiv=document.getElementById('printArea'); printDiv.innerHTML=`<h2 style="text-align:center">${title}</h2>`+tableHtml;
+  printWithCleanup('printArea');
+}
+function checkAlerteSauvegarde(){let hist=JSON.parse(localStorage.getItem('bilanHistory')||'[]'); let aujourdHui=document.getElementById('dateJour').value; if(!aujourdHui) return; let dejaSauvegarde=hist.some(b=>b.date==aujourdHui); let banner=document.getElementById('alerteBanner'); let aDesDonnees=(parseFloat(document.getElementById('CashMoneyEnd').value)||0)>0 || (parseFloat(localStorage.getItem('transaction'))||0)>0; if(!dejaSauvegarde && aDesDonnees){banner.innerHTML='⚠️ BILAN DU '+aujourdHui+' ('+getJourSemaine(aujourdHui)+') NON SAUVEGARDÉ! <button onclick="genererBilanEtAutoSave()" style="background:white;color:red;border:none;padding:5px 12px;border-radius:5px;font-weight:bold;margin-left:10px;cursor:pointer">💾 IMPRIMER + SAUVEGARDER</button> <button onclick="this.parentElement.style.display=`none`" style="background:black;color:white;border:none;padding:5px 8px;margin-left:8px;cursor:pointer">X</button>'; banner.style.display='block';} else {banner.style.display='none';}}
+
+document.getElementById('currentUser').textContent=sess.user;
+document.getElementById('dateJour').value=todayISO();
+document.getElementById('dateJour').max=todayISO();
+restoreAll();
+initStartup();
+applyFilters();
+</script>
+
+</body></html>
